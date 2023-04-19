@@ -45,17 +45,11 @@ def scrape_text(url):
 
 def extract_hyperlinks(soup):
     """Extract hyperlinks from a BeautifulSoup object"""
-    hyperlinks = []
-    for link in soup.find_all('a', href=True):
-        hyperlinks.append((link.text, link['href']))
-    return hyperlinks
+    return [(link.text, link['href']) for link in soup.find_all('a', href=True)]
 
 def format_hyperlinks(hyperlinks):
     """Format hyperlinks into a list of strings"""
-    formatted_links = []
-    for link_text, link_url in hyperlinks:
-        formatted_links.append(f"{link_text} ({link_url})")
-    return formatted_links
+    return [f"{link_text} ({link_url})" for link_text, link_url in hyperlinks]
 
 def scrape_links(url):
     """Scrape links from a webpage"""
@@ -97,8 +91,8 @@ def summarize_text(text, question, debug = False):
     if not text:
         return None
 
-    text_length = len(text)
     if debug:
+        text_length = len(text)
         print("\n"+f"Text length: {text_length} characters")
 
     summaries = []
@@ -115,15 +109,21 @@ def summarize_text(text, question, debug = False):
 
     combined_summary = "\n".join(summaries)
 
-    final_summary = get_response([{"role": "user","content": f"\n\n\n{combined_summary}\n\n\n Using the above text, please answer the following question: \"{question}\" -- if the question cannot be answered using the text, please summarize the text. Do not comment on the text. Do not start with 'The text talks about' or 'The text provides'. Just summarize according to the question!"}], max_tokens=300)
-
-    return final_summary
+    return get_response(
+        [
+            {
+                "role": "user",
+                "content": f"\n\n\n{combined_summary}\n\n\n Using the above text, please answer the following question: \"{question}\" -- if the question cannot be answered using the text, please summarize the text. Do not comment on the text. Do not start with 'The text talks about' or 'The text provides'. Just summarize according to the question!",
+            }
+        ],
+        max_tokens=300,
+    )
 
 def search(user_input, mode = "chat"):
     query = get_response([{"role": "user", "content": f"Given the user input: {user_input}. What would you search on Google to help the user? Respond with a simple and straightforward search query starting with \" and ending with \"."}], max_tokens=100)
     query = query.split("\"")[1]
     url = f"https://www.google.com/search?q={query}"
-    links = scrape_links(url)[0:20]
+    links = scrape_links(url)[:20]
     links = [link for link in links if not link.__contains__("/search?") and not link.__contains__(".google.com") and not link.__contains__("youtube")]
     links = [link.split("(")[1] for link in links]
     links = [link.replace(")","") for link in links if link.__contains__("https://")]
@@ -135,7 +135,7 @@ def search(user_input, mode = "chat"):
 
     # Only use 3 links or less
     if len(links) > num_sources:
-        links = links[0:num_sources]
+        links = links[:num_sources]
     summaries = []
 
     for n, link in enumerate(links):
@@ -152,6 +152,9 @@ def search(user_input, mode = "chat"):
     final_summary = summarize_text(combined_summary, query)
 
     if mode == "chat":
-        return {"role": "user", "content": user_input + f"\n\n(You searched for {query} on google, and found this information: {final_summary} The sources are: {links}. Please respond with a message to the user.)"}
+        return {
+            "role": "user",
+            "content": f"{user_input}\n\n(You searched for {query} on google, and found this information: {final_summary} The sources are: {links}. Please respond with a message to the user.)",
+        }
     else:
-        return user_input + f"\n\n(You searched for {query} on google, and found this information: {final_summary} The sources are: {links}. Please respond with a message to the user.)"
+        return f"{user_input}\n\n(You searched for {query} on google, and found this information: {final_summary} The sources are: {links}. Please respond with a message to the user.)"

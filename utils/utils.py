@@ -117,22 +117,15 @@ def preprompt(agent_name):
     personality = op_config["personality"]
     example = op_config["example"]
 
-    preprompt = f"You are a helpful {name} AI, your name is \"{name}\". You are: {personality}. {description}. Here is an example of how you might respond to a user: '{example}'"
-
-    return preprompt
+    return f"""You are a helpful {name} AI, your name is \"{name}\". You are: {personality}. {description}. Here is an example of how you might respond to a user: '{example}'"""
 
 def short_preprompt(agent_name):
 
     with open(os.path.join("agents", agent_name, f"{agent_name}.json"), "r") as f:
         op_config = json.load(f)
 
-    description = op_config["description"]
-
-    return description
+    return op_config["description"]
 
 def contains_search_keywords(user_input):
     keywords = ["search", "browse", "research", "look up", "find", "look for", "google", "browsing", "googling", "looking for", "looking up", "looking up"]
-    for keyword in keywords:
-        if user_input.lower().__contains__(keyword):
-            return True
-    return False
+    return any(user_input.lower().__contains__(keyword) for keyword in keywords)

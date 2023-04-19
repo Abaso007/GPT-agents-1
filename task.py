@@ -11,17 +11,17 @@ from utils.browsing import search
 
 
 def get_best_agent(context: List[dict], agents: List[str], current_agent: Optional[str] = None):
-    candidates = [{"role": "user", "content": f"Which agent should continue the conversation? It should be someone that makes sense. If the conversation is about food, the Chef should be chose. If the conversation is about finance, the Chef should NOT be chosen. Reply only with the Agents name: {', '.join(agents)}"}]
-    candidates.extend(context)
-
+    candidates = [
+        {
+            "role": "user",
+            "content": f"Which agent should continue the conversation? It should be someone that makes sense. If the conversation is about food, the Chef should be chose. If the conversation is about finance, the Chef should NOT be chosen. Reply only with the Agents name: {', '.join(agents)}",
+        },
+        *context,
+    ]
     response = get_response(candidates, temperature=0.7)
-    # From the response, find the word that starts with a capital letter
-    selected_agent = None
-    for word in response.split():
-        if word[0].isupper():
-            selected_agent = word
-            break
-
+    selected_agent = next(
+        (word for word in response.split() if word[0].isupper()), None
+    )
     selected_agent = response.strip() if response is not None else None
 
     if selected_agent not in agents:
@@ -96,10 +96,7 @@ def agent_interaction(goal: str):
             search_result = search(response, mode="multi_agent_interaction")
             messages.append({"role": "user", "content": search_result.split("\n\n")[1]})
             response = get_response(messages=messages, temperature=0.1)
-            messages.append({"role": "assistant", "content": response})
-        else:
-            messages.append({"role": "assistant", "content": response})
-
+        messages.append({"role": "assistant", "content": response})
         # Show agent's response
         print("\033[35m"+f"\n{selected_agent}: " + "\033[0m" + f"{response}\n")
 
